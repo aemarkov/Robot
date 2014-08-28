@@ -1,49 +1,38 @@
-//============================= Подключения =====================
 #include <Servo.h>
-//============================= Объявления объектов =============
 Servo LRServo;
 Servo LServo;
 Servo RServo;
-//============================= Константы =======================
-//----------------------------- Константы датчиков -------------
-#define Array_Size 90 //Размер массива сканирования
-#define ScanDelay 10  //Задержка сканирования
-#define Min_Val 70    //Пороговое значение обнаружения препятсвия
-//----------------------------- Константы навигации ------------
-#define Rot_Scale 12 //милисекунд на градус
-#define Stop_Time 93 //Значения, при котором сервы не двигаються
-#define Scale 500 //ms for point
-#define minL 2 //На сколько надо проехать чтобы снова выполнить программу
-//----------------------------- Константы выводов --------------
-//#define upPin 57
-//#define downPin 56
-#define leftPin 55
+//==========================
+#define LedPin 12
 #define rightPin 54
-
-#define LedPin 6
-
-int LEDS[4]={2,3,4,5};
-int DAT[4]={56,57,58,59};
-//-------------------------------------------------------------
-//============================= Глобальные переменные =========
-float AngleScale=0; //градусов на 1 шаг
+#define leftPin 55
 //--------------------------
-byte Pos=90; //Позиция сервы
-//---------------------------
-/*int upPin=57;
-int downPin=56;
-int leftPin = 55;
-int rightPin = 54;
-int LedPin = 6;*/
-long int time=0;
-//-------------------Значения с "головы" -------------------
-int upVal=0;
-int downVal=0;
+#define minVal 120
+//--------------------------
+#define Array_Size 90
+#define ScanDelay 10
+//--------------------------
+#define Stop_Time 90
+#define Rot_Scale 9 //милисекунд на градус
+#define DScale 0.0015
+float Scale = DScale; //ms for point
+//==========================
+int rightVal=0;
 int leftVal=0;
-int rightVal =0;
-//------------------ Значения с датчиков падения ----------
-int Pad[4]={0,0,0,0};
 
+int Data [2][Array_Size];
+int Pos=90;
+float AngleScale=0;
+//------------------- НАВИГАЦИЯ -----
+int Angle =90;
+int Bearing =0;
+byte X =128;
+byte Y=128;
+long int Nav_Time=0; 
+byte Points [2][10];  //Координаты точек  
+byte NofPoints;        //Кол-во точек
+byte CurNo=0;         //Номер текущей точки
+//--------------------------
 // Значение для управления функцией Scan
 struct ScanDataType{
 	byte Mode;
@@ -57,139 +46,263 @@ static ScanDataType ScanData = {1,0,0,false};
 Mode 1 - rotate from 180 to 0
 Mode 2 - compleate
 */
-//--------------------------
-int Data [2][Array_Size]; //Массив данных с "головы"
-//------------ Навигация -----------------
-//============================ Координаты контрольных точек
-byte pCoor[2][100];
-byte pNo=0;
-
-byte X=128; //Текущие координаты
-byte Y=128; //
-byte Xt=255;//координаты следующей контрольной точки
-byte Yt = 255; 
-int Angle =90; //Текущий угол
-int Bearing = 0; //Угол на точку
-byte Coords[2][100]; //Массив с координатами точек
-byte No=0; //Кол-во точек
-
-byte L =100; //Расстояние, пройденное с момента последнего измерения
-//-----------------------
-long int Nav_Time=0; //Время движения
-//================================= Прочие системные переменные ====================
-byte isObst=0; //Есть ли препятсвие
-/* 0 - нет, 1-спереди, 2-яма спереди, 3-яма сзади*/
-
-//**********************************************************************
-//----------------------------------------------------------------------
-//**********************************************************************
+//**************************************************************
+//==============================================================
+//**************************************************************
 void setup(){
-//Serial.begin (9600);
-LRServo.attach(9);
-RServo.attach (10);
-LServo.attach (11);
-time = millis()+3000;
-AngleScale = 180/Array_Size;
-
-//for (int _i=0; _i<=99;_i++){Coords[0][_i]=0; Coords[1][_i]=0;}
+  LRServo.attach(9);
+  RServo.attach (10);
+  LServo.attach (11);
+  LRServo.write(90);
+  LRServo.write(Pos);
+  pinMode (LedPin,OUTPUT);
+  Serial.begin(9600);
+  //-------------------------
+  AngleScale = 180/Array_Size;
+  getPoints();
+  pinMode(13,OUTPUT);
+  delay(5000);
 }
-
+//**************************************************************
+//==============================================================
+//**************************************************************
 void loop(){
-Detect();
-if (isObst==1){ScanData.on=true; Scan();}
-LRServo.write(Pos);
-//===================== Передача данных о координатах ========================
-/*if (Serial.available() >0){
-   char _Ch;
-   _Ch = Serial.read();
-  for (int i=0; i<No;i++){
-    Serial.print (Coords[0][i],DEC);
-    Serial.print(' ');
-    Serial.println (Coords[1][i],DEC);
-  }}*/
-delay (10);
+//int _D=0;
+int _X=0;
+int _Y=0;
+
+if (!(CurNo>NofPoints-1)){
+_X=Points[0][CurNo];  // Получаем координаты след. Точки
+_Y=Points[1][CurNo];  //
+
+// Вычисляем свои координаты
+int _XX=0;
+int _YY=0;
+_XX=(millis()-Nav_Time)*(double) cos((double)Angle*3.145926/180)*Scale;
+_YY=(millis()-Nav_Time)*(double) sin((double)Angle*3.145926/180)*Scale;
+X=X+_XX;
+Y=Y+_YY;
+if (millis()-Nav_Time > 1000){Nav_Time=millis();}
+
+if (sqrt ((_X-X)*(_X-X)+(_Y-Y)*(_Y-Y)) < 1) {
+  CurNo++;
+  if (CurNo<=NofPoints-1){
+   digitalWrite(13,HIGH);
+   delay(200);
+   digitalWrite(13,LOW);
+  _X=Points[0][CurNo];  // Получаем координаты след. Точки
+  _Y=Points[1][CurNo];}
+
+delay(50);
+
+ Serial.print ("Chekpoint! ");
+ Serial.println (CurNo);
+}
+//Вычисление курса на точку
+
+if (abs(X-_X)<=1 && _Y>Y){Bearing =  90 -Angle;}
+if (abs(X-_X)<=1 && _Y<Y){Bearing=-90-Angle;}
+if (abs(_Y-Y)<=1 && _X>X){Bearing = 0 - Angle;}
+if (abs(_Y-Y)<=1 && _X<X){Bearing = 180-Angle;}
+if (_Y!=Y && _X!=X){
+  Bearing =atan((_Y-Y)/(_X-X))*180/3.1415926;
+  
+if (_X-X>1 && _Y-Y>1){Bearing=Bearing-Angle;}
+if (_X-X<-1 && _Y-Y>1){Bearing=Bearing+90-Angle; }
+if (_X-X>1 && _Y-Y<-1){Bearing=-Bearing-Angle;}
+if (_X-X<-1 && _Y-Y<-1){Bearing=-(Bearing+90-Angle);}
 }
 
-//**********************************************************************
-//----------------------------------------------------------------------
-//**********************************************************************
-void getData(){
-  int _leftVal=0;
-  int _rightVal=0;
-  int _leftVal1=0;
-  int _rightVal1=0;
+Bearing = AngleTR(Bearing);
+
+
+/*Serial.print (X, DEC);
+Serial.print (' ');
+Serial.print (Y, DEC);
+Serial.print (' ');
+Serial.print (_X);
+Serial.print (' ');
+Serial.print (_Y);
+Serial.print (' ');
+Serial.print (Angle);
+Serial.print(' ');
+Serial.println (Bearing);
+*/
+
+if (abs(0-Bearing)<5){
+    Serial.println ("[-5,5]");
+if (Detect()==0 ){MoveForward();Serial.println ("Go Forward");}
+ else{
+   Serial.print ("Turn ");
+  // Serial.println ((leftVal+rightVal)/2);
+   
+  //byte _R=2;
+  //_R= random (0,1);
+  Stop();
+  boolean B;
+  ScanData.on = true;
+  do {
+      B=Scan();
+     delay(5);
+  } while (B==false);
+//Serial.println(ScanData.i, DEC);
+  if (B==true){analysis(0); MoveForward(); Delay(1000);     Nav_Time=millis();}
+ }
  
- digitalWrite (LedPin,HIGH);
- delayMicroseconds (100);
- _rightVal = analogRead(rightPin);
- _leftVal= analogRead (leftPin);
- digitalWrite (LedPin,LOW);
- delayMicroseconds (100);
- _rightVal1 = analogRead(rightPin);
- _leftVal1= analogRead (leftPin);
- rightVal = abs(_rightVal-_rightVal1);
- leftVal = abs( _leftVal-_leftVal1);
-
- }
-//**********************************************************************
-//----------------------------------------------------------------------
-//**********************************************************************
-void Scan(){
-if (millis() >= ScanData.Time){
-        //Serial.println (ScanData.i);
-       	if (ScanData.Mode==0 && ScanData.on == true){ScanData.i++;}
-	if (ScanData.Mode==1 && ScanData.on == true){ScanData.i--;}
-	if (ScanData.i>=Array_Size){
-            ScanData.on = false; 
-            ScanData.Mode=1;
-            ScanData.i=Array_Size /2; 
-            Pos=ScanData.i*AngleScale;
-            LRServo.write(Pos);
-            analysis();
-          
-          }
-	if (ScanData.i <=0){ScanData.Mode=0;}
-	getData();
-        //Serial.println (ScanData.i);
-        Data [0][ScanData.i] = leftVal;
-        Data [1][ScanData.i]=rightVal;
-
-
-	if (ScanData.on == true) {Pos=ScanData.i*AngleScale;}
-       ScanData.Time = millis()+ScanDelay;
 }
- }
- //**********************************************************************
-//----------------------------------------------------------------------
-//**********************************************************************
-void Detect() {
- getData();
-  L=(millis()-Nav_Time)/Scale;
 
- if (((leftVal+rightVal)/2 ) > Min_Val && ScanData.on==false){
- //Stop();
- isObst=1;
- //=====================================================================================
-  X=X+L* cos((Angle*3.141592654)/180);
- Y=Y+L*sin((Angle*3.141592654)/180);
- Coords[0][No]=X;
- Coords[1][No]=Y;
- No=No+1;
-//=======================================================================================
- //ScanData.on=true;
- }  
- if ((leftVal+rightVal)/2  < Min_Val && ScanData.on==false){isObst=0;}//MoveForvard();}
- Scan();
+
+if (Bearing < -5){
+  Stop();
+   Serial.println ("<-5");
+  Scale=0;
+  ScanData.on = true;
+  boolean B;
+  B=Scan();
+  if (B==true){
+    if (analysis(2)){
+      Serial.println ("Right prepyatstv");    
+      delay (300); 
+      MoveForward();  
+      Delay(2000); 
+      Nav_Time=millis();
+      Nav_Time = millis();} else {
+      Serial.print ("TurnRight ");
+      Serial.println (Bearing);
+      TurnRight(abs(Bearing));
+      Bearing = 0;
+         MoveForward();  
+     Delay(2000);
+     Nav_Time=millis();
+  }
+  }
 }
-//**********************************************************************
-//----------------------------------------------------------------------
-//********************************************************************** 
-void analysis(){
-  int _rightSum=0;
+
+if (Bearing > 5){
+  //Serial.println (">5");
+  Stop();
+  Scale=0;
+  ScanData.on = true;
+  boolean B;
+  B=Scan();
+  if (B==true){
+   if (analysis(1)){ 
+     Serial.println ("Left prepyatstv");   
+      delay (300); 
+     MoveForward();  
+     Delay(2000); 
+          Nav_Time=millis();
+     Nav_Time = millis();} else {
+       Serial.print ("TurnRight ");
+      Serial.println (Bearing);
+     TurnLeft(abs(Bearing));
+          Bearing=0;  
+      MoveForward();  
+     Delay(2000);
+          Nav_Time=millis();
+ }
+}
+}
+
+//ScanData.on=true;
+//boolean A;
+//A=Scan();
+} else {Stop();
+digitalWrite(13,HIGH);
+delay(100);
+digitalWrite(13,LOW);
+delay(100);
+}
+delay(2);
+}
+//**************************************************************
+//==============================================================
+//**************************************************************
+void getData(){
+ int _rightVal=0;
+ int _leftVal=0;
+ 
+ int _rightVal1=0;
+ int _leftVal1=0;
+ 
+ int _leftVal2 =0;
+ int _rightVal2 =0;
+ int _k=5;
+ for (int _i=0; _i<=_k-1; _i++){
+   
+ digitalWrite(LedPin,HIGH);
+ delayMicroseconds(10);
+  
+ _rightVal1=analogRead(rightPin);
+ _leftVal1=analogRead(leftPin);
+ 
+ digitalWrite(LedPin,LOW);
+ delayMicroseconds(10);
+ 
+ _rightVal2=abs(_rightVal1-analogRead(rightPin));
+ _leftVal2=abs(_leftVal1-analogRead(leftPin));  
+ 
+ _rightVal=_rightVal+_rightVal2;
+ _leftVal=_leftVal+_leftVal2;
+ }
+ leftVal=_leftVal/_k;
+rightVal=_rightVal/_k;
+
+}
+//**************************************************************
+//==============================================================
+//**************************************************************
+byte Detect(){
+  getData();
+  if ((leftVal+rightVal)/2 > minVal){return 1;} else {return 0;}
+}
+//**************************************************************
+//==============================================================
+//**************************************************************
+ boolean Scan(){
+   //Serial.println (ScanData.i);
+   boolean RVal=false;
+  //Serial.println (ScanData.on, DEC);
+  if (ScanData.on == true && ScanData.Mode == 0){
+   ScanData.i=0;
+   Pos=ScanData.i*AngleScale;
+   LRServo.write (Pos);
+   delay (650);
+   ScanData.Mode = 1;
+  } 
+  if (ScanData.on == true && ScanData.Mode == 1){
+    if (ScanData.i<Array_Size){
+      ScanData.i++;
+      Pos=ScanData.i*AngleScale;
+      LRServo.write(Pos);
+      delay(3);
+      getData();
+      Data [0][ScanData.i] = leftVal;
+      Data [1][ScanData.i]=rightVal;
+    }
+   if (ScanData.i>=Array_Size){
+     ScanData.i=Array_Size/2;
+     Pos=90;
+     LRServo.write (Pos);
+     ScanData.Mode=0;
+     ScanData.on=false;
+     delay(650);
+      RVal = true; 
+     //analysis();
+   }  
+ }
+ return RVal;
+ }
+//**************************************************************
+//==============================================================
+//************************************************************** 
+boolean analysis(byte _mode){
+    boolean _isObst=false;
+/*  int _rightSum=0;
   int _leftSum=0;
-for (int _i=0; _i<=Array_Size-1; _i++){
+//for (int _i=0; _i<=Array_Size-1; _i++){
    // Serial.println ((Data[0][_i]+Data[1][_i])/2 ,DEC);}
-}
+
 for (int _i=0; _i<=44;_i++){
   _leftSum=_leftSum+(Data[0][_i]+Data[1][_i])/2;}
 _leftSum=_leftSum/(45);
@@ -207,12 +320,58 @@ if (_leftSum < _rightSum){
 if (_rightSum < _leftSum){
     //Serial.println("r");
     TurnRight(90);
+ }*/
+ if (_mode == 0){
+     int _MaxVal=0;
+     int _V=0;
+     byte _ang=0;
+     for (int _i=0; _i<=Array_Size-1; _i++){
+        _V=(Data[0][_i]+Data[1][_i])/2;
+        if (_V>=minVal){_isObst=true;}
+        if (_MaxVal<_V && _V > minVal){_MaxVal=_V; _ang=_i*AngleScale;}
+      }
+   //byte _R=0;
+  //_R= random (0,1);
+ //if (_R==1){TurnLeft(90); Serial.println ("_TL 90");} else {TurnRight(90); Serial.println("_TR 90");}
+  if(_ang<90){TurnRight(_ang);} else{TurnLeft(180-_ang);}
+  
+   
  }
+ //==========================================================
+ if (_mode == 1){  //Ищем препятствие слева
+  int _MaxVal=0;
+  int _V=0;
+  byte _ang=0;
+  
+  for (int _i=0; _i<=Array_Size/2-1; _i++){
+    _V=(Data[0][_i]+Data[1][_i])/2;
+  if (_V>=minVal){_isObst=true;}
+    if (_MaxVal<_V && _V > minVal){_MaxVal=_V; _ang=_i*AngleScale;}
+  }
+  //Serial.println (_ang, DEC);
+  if (_isObst){TurnRight(_ang);Serial.println (_ang,DEC);}
+ }
+//===========================================================
+ if (_mode == 2){  //Ищем препятствие слева
+  int _MaxVal=0;
+  int _V=0;
+  byte _ang=0;
+  
+  for (int _i=Array_Size/2; _i<=Array_Size; _i++){
+    _V=(Data[0][_i]+Data[1][_i])/2;
+  if (_V>=minVal){_isObst=true;}
+    if (_MaxVal<_V && _V > minVal){_MaxVal=_V; _ang=_i*AngleScale;}
+  }
+  if (_isObst){TurnLeft(180-_ang); Serial.println (180-_ang,DEC);}
+ }
+//Serial.println (_isObst);
+ return (_isObst);
 }
 //===========================================================
-void MoveForvard(){
+void MoveForward(){
  LServo.write (0);
  RServo.write (180);
+ Scale=DScale;
 } 
 
 void MoveBack(){
@@ -223,32 +382,97 @@ void MoveBack(){
 void Stop(){
  LServo.write (Stop_Time);
  RServo.write (Stop_Time); 
-
+ Scale=0;
   
 }
 void TurnLeft(int _angle){
- Angle=Angle+90;
+ Angle=Angle+_angle;
+ Serial.print (" "); Angle=AngleTR(Angle);
  LServo.write (180);
  RServo.write(180);
- delay (_angle*Rot_Scale);
+ delay (abs(_angle)*Rot_Scale);
  LServo.write(Stop_Time);
  RServo.write(Stop_Time);
+ Nav_Time=millis();
 }
 
 void TurnRight(int _angle){
-  Angle=Angle-90;
- LServo.write (0);
+  Angle=Angle-_angle;
+
+  Angle=AngleTR(Angle);
+  LServo.write (0);
  RServo.write(0);
- delay (_angle*Rot_Scale);
+delay (abs(_angle)*Rot_Scale);
  LServo.write(Stop_Time);
  RServo.write(Stop_Time);
+ Nav_Time=millis();
+}
+
+
+//**************************************************************
+//==============================================================
+//************************************************************** 
+void getPoints(){
+ NofPoints = 4;
+ Points [0][0]=128;
+ Points [1][0]=190;
+ 
+ Points [0][1]=190;
+ Points [1][1]=190;
+ 
+ Points [0][2]=190;
+ Points[1][2]=128;
+ 
+ Points[0][3] = 128;
+ Points[1][3]=128;
+ CurNo=0;
+ 
+  
+}
+
+//=======================================================
+//======================================================
+int AngleTR(int _Angle){
+	double _A=0;
+	int _A1=0;
+	if (abs(_Angle)>180 || abs(_Angle)<0){
+		_A=_Angle/180;
+		if (_Angle>0) {
+			_A1=(int) floor(_A) % 2;
+			if (_A1 == 0){
+				_Angle = _Angle - (int) floor(_A)*180;}
+			else {
+				_Angle=-180+(_Angle-(int)floor(_A)*180); }
+		}
+		 else{
+			_A1=(int) ceil(_A) % 2;
+			if (_A1==0){
+				_Angle = _Angle + int(ceil(_A)*180);
+			}else {
+				_Angle = 180+(_Angle+(int)(abs(ceil(_A)*180)));
+			}
+		}
+	}
+return _Angle;
+}
+//======================================================================
+//**********************************************************************
+//=====================================================================
+void Delay(int _millis){
+  int _i=0;
+  byte _V=0;
+do {
+  _V=Detect();
+  _i++;
+} while ((_i<=_millis-1) && (_V==0));
+
+}
+int freeRam () {
+  extern int __heap_start, *__brkval; 
+  int v; 
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }
 
 /*
-Q7-Q8 Down A2 56
-Q5-Q6 Right A0 54
-Q3-Q4 Up A3 57
-Q1-Q2 Left A2 55
-
+сейчас включу смотри как будетзнак меньше -5 - значит проехал линию
 */
-
