@@ -1,3 +1,26 @@
+/*=================================================================
+        FUCKING ROBOT(c) v2.3 by DARK CODER(r) and Chebyran 
+___________________________________________________________________
+                   !!!WARNING!!!
+                    Indian code
+        Will be damage your brain if you are not
+        an Indian coder
+___________________________________________________________________
+                     Functions:
+1. Fucking moving by throug the waypints
+2. Moving around fucking obstacles
+3. IR-sensor obstacles detection (OVER9000 fucking bags)
+___________________________________________________________________
+                   ________
+              *---<___|____(
+1. Can't know it's own speed, angle, position, so
+THEY ARE FUCKING COMPUTE BY THE FUCKING CONSTANT
+VALUES AND TIME OF MOVING. VERY LOW PRECISION
+2. Can lost his position and random moving for a long time
+___________________________________________________________________
+          DO NOT COPY-PASTE, USE IN OWN PROJECTS AND USE TO
+      BUILDING GIANT HUMAN-LIKE ROBOTS TO TAKING OVER THE WORLD 
+===================================================================*/      
 #include <Servo.h>
 Servo LRServo;
 Servo LServo;
@@ -7,17 +30,17 @@ Servo RServo;
 #define rightPin 54
 #define leftPin 55
 //--------------------------
+//управление
+#define controlPin 57
+#define OKPin 26
+//--------------------------
 #define minVal 120
 //--------------------------
 #define Array_Size 90
 #define ScanDelay 10
-//------------- Боковые датчики -------------
-byte sideLEDPin [2]={2,3};
-byte sidePin[2]={57,58};
-int sideVal [2]={0,0};
-//-------------------------------------------
-#define Stop_Time 91
-#define Rot_Scale 11 //милисекунд на градус
+//--------------------------
+byte Stop_Time =90;
+byte Rot_Scale =12; //милисекунд на градус
 #define DScale 0.0015
 float Scale = DScale; //ms for point
 //==========================
@@ -65,54 +88,162 @@ void setup(){
   AngleScale = 180/Array_Size;
   getPoints();
   pinMode(13,OUTPUT);
-  //delay(5000);
+  pinMode (OKPin, INPUT);
+  config();
+  delay(5000);
 }
 //**************************************************************
 //==============================================================
 //**************************************************************
 void loop(){
-getAdvData();
-Serial.print (sidePin[0],DEC);
-Serial.print (" ");
-Serial.println (analogRead(57), DEC);
+//int _D=0;
+int _X=0;
+int _Y=0;
 
-delay(2);
+if (!(CurNo>NofPoints-1)){
+_X=Points[0][CurNo];  // Получаем координаты след. Точки
+_Y=Points[1][CurNo];  //
+
+// Вычисляем свои координаты
+int _XX=0;
+int _YY=0;
+_XX=(millis()-Nav_Time)*(double) cos((double)Angle*3.145926/180)*Scale;
+_YY=(millis()-Nav_Time)*(double) sin((double)Angle*3.145926/180)*Scale;
+X=X+_XX;
+Y=Y+_YY;
+if (millis()-Nav_Time > 1000){Nav_Time=millis();}
+
+if (sqrt ((_X-X)*(_X-X)+(_Y-Y)*(_Y-Y)) < 1) {
+  CurNo++;
+  if (CurNo<=NofPoints-1){
+   digitalWrite(13,HIGH);
+   delay(200);
+   digitalWrite(13,LOW);
+  _X=Points[0][CurNo];  // Получаем координаты след. Точки
+  _Y=Points[1][CurNo];}
+
+delay(50);
+
+ Serial.print ("Chekpoint! ");
+ Serial.println (CurNo);
 }
-//**************************************************************
-//==============================================================
-//**************************************************************
-void getAdvData(){
- int _firstVal[2]={0,0};
+//Вычисление курса на точку
 
- 
- int _secondVal[2]={0,0};
- 
- int _sumVal[2]={0,0};
- 
- int _k=5;
- for (int _i=0; _i<=_k-1; _i++){
-   
- digitalWrite(sideLEDPin[0],HIGH);
- digitalWrite(sideLEDPin[1],HIGH);
- delayMicroseconds(10);
+//Гребанный костыль, решается atan2
+if (abs(X-_X)<=1 && _Y>Y){Bearing =  90 -Angle;}
+if (abs(X-_X)<=1 && _Y<Y){Bearing=-90-Angle;}
+if (abs(_Y-Y)<=1 && _X>X){Bearing = 0 - Angle;}
+if (abs(_Y-Y)<=1 && _X<X){Bearing = 180-Angle;}
+if (_Y!=Y && _X!=X){
+  Bearing =atan((_Y-Y)/(_X-X))*180/3.1415926;
   
-_firstVal[0]=analogRead(sidePin[0]);
-_firstVal[1]=analogRead(sidePin[1]);
- 
- digitalWrite(sideLEDPin[0],LOW);
- digitalWrite(sideLEDPin[1],LOW);
- delayMicroseconds(10);
- 
- _secondVal[0]=abs(_firstVal[0]-analogRead(sidePin[0]));
- _secondVal[1]=abs(_firstVal[1]-analogRead(sidePin[1]));  
- 
- _sumVal[0]=_sumVal[0]+_secondVal[0];
- _sumVal[1]=_sumVal[1]+_secondVal[1];
+if (_X-X>1 && _Y-Y>1){Bearing=Bearing-Angle;}
+if (_X-X<-1 && _Y-Y>1){Bearing=Bearing+90-Angle; }
+if (_X-X>1 && _Y-Y<-1){Bearing=-Bearing-Angle;}
+if (_X-X<-1 && _Y-Y<-1){Bearing=-(Bearing+90-Angle);}
+}
+
+Bearing = AngleTR(Bearing);
+
+
+/*Serial.print (X, DEC);
+Serial.print (' ');
+Serial.print (Y, DEC);
+Serial.print (' ');
+Serial.print (_X);
+Serial.print (' ');
+Serial.print (_Y);
+Serial.print (' ');
+Serial.print (Angle);
+Serial.print(' ');
+Serial.println (Bearing);
+*/
+
+if (abs(0-Bearing)<5){
+    Serial.println ("[-5,5]");
+if (Detect()==0 ){MoveForward();Serial.println ("Go Forward");}
+ else{
+   Serial.print ("Turn ");
+  // Serial.println ((leftVal+rightVal)/2);
+   
+  //byte _R=2;
+  //_R= random (0,1);
+  Stop();
+  boolean B;
+  ScanData.on = true;
+  do {
+      B=Scan();
+     delay(5);
+  } while (B==false);
+//Serial.println(ScanData.i, DEC);
+  if (B==true){analysis(0); MoveForward(); Delay(1000);     Nav_Time=millis();}
  }
- sideVal[0]=_sumVal[0]/_k;
-sideVal[1]=_sumVal[1]/_k;
+ 
+}
 
 
+if (Bearing < -5){
+  Stop();
+   Serial.println ("<-5");
+  Scale=0;
+  ScanData.on = true;
+  boolean B;
+  B=Scan();
+  if (B==true){
+    if (analysis(2)){
+      Serial.println ("Right prepyatstv");    
+      delay (300); 
+      MoveForward();  
+      Delay(2000); 
+      Nav_Time=millis();
+      Nav_Time = millis();} else {
+      Serial.print ("TurnRight ");
+      Serial.println (Bearing);
+      TurnRight(abs(Bearing));
+      Bearing = 0;
+         MoveForward();  
+     Delay(2000);
+     Nav_Time=millis();
+  }
+  }
+}
+
+if (Bearing > 5){
+  //Serial.println (">5");
+  Stop();
+  Scale=0;
+  ScanData.on = true;
+  boolean B;
+  B=Scan();
+  if (B==true){
+   if (analysis(1)){ 
+     Serial.println ("Left prepyatstv");   
+      delay (300); 
+     MoveForward();  
+     Delay(2000); 
+          Nav_Time=millis();
+     Nav_Time = millis();} else {
+       Serial.print ("TurnRight ");
+      Serial.println (Bearing);
+     TurnLeft(abs(Bearing));
+          Bearing=0;  
+      MoveForward();  
+     Delay(2000);
+          Nav_Time=millis();
+ }
+}
+}
+
+//ScanData.on=true;
+//boolean A;
+//A=Scan();
+} else {Stop();
+digitalWrite(13,HIGH);
+delay(100);
+digitalWrite(13,LOW);
+delay(100);
+}
+delay(2);
 }
 //**************************************************************
 //==============================================================
@@ -312,23 +443,20 @@ delay (abs(_angle)*Rot_Scale);
 //==============================================================
 //************************************************************** 
 void getPoints(){
- NofPoints = 4;
- Points [0][0]=128;
- Points [1][0]=190;
- 
- Points [0][1]=190;
- Points [1][1]=190;
- 
- Points [0][2]=190;
- Points[1][2]=128;
- 
- Points[0][3] = 128;
- Points[1][3]=128;
- CurNo=0;
- 
-  
-}
 
+       NofPoints = 4;
+       Points [0][0]=128;
+       Points [1][0]=190;
+ 
+       Points [0][1]=190;
+       Points [1][1]=190;
+ 
+       Points [0][2]=190;
+       Points[1][2]=128;
+ 
+       Points[0][3] = 128;
+       Points[1][3]=128;
+}
 //=======================================================
 //======================================================
 int AngleTR(int _Angle){
@@ -354,6 +482,40 @@ int AngleTR(int _Angle){
 	}
 return _Angle;
 }
+//======================================================================
+//**********************************************************************
+//=====================================================================
+void Delay(int _millis){
+  int _i=0;
+  byte _V=0;
+do {
+  _V=Detect();
+  _i++;
+} while ((_i<=_millis-1) && (_V==0));
+
+}
+//======================================================================
+//**********************************************************************
+//=====================================================================
+void config(){
+  int _V=0;
+  while (digitalRead(OKPin)==LOW){
+    for (int _i=0; _i<=9;_i++){
+    _V=_V+analogRead(controlPin);
+    }
+    _V=_V/10;
+    Serial.print(_V, DEC);
+    _V=(_V-215)/40;
+    Stop_Time=90+_V;
+    Serial.print(' ');
+    Serial.println(Stop_Time, DEC);
+    Stop();
+    delay(100);
+  }
+}
+//======================================================================
+//**********************************************************************
+//=====================================================================
 int freeRam () {
   extern int __heap_start, *__brkval; 
   int v; 
