@@ -1,26 +1,4 @@
-/*=================================================================
-        FUCKING ROBOT(c) v2.3 by DARK CODER(r) and Chebyran 
-___________________________________________________________________
-                   !!!WARNING!!!
-                    Indian code
-        Will be damage your brain if you are not
-        an Indian coder
-___________________________________________________________________
-                     Functions:
-1. Fucking moving by throug the waypints
-2. Moving around fucking obstacles
-3. IR-sensor obstacles detection (OVER9000 fucking bags)
-___________________________________________________________________
-                   ________
-              *---<___|____(
-1. Can't know it's own speed, angle, position, so
-THEY ARE FUCKING COMPUTE BY THE FUCKING CONSTANT
-VALUES AND TIME OF MOVING. VERY LOW PRECISION
-2. Can lost his position and random moving for a long time
-___________________________________________________________________
-          DO NOT COPY-PASTE, USE IN OWN PROJECTS AND USE TO
-      BUILDING GIANT HUMAN-LIKE ROBOTS TO TAKING OVER THE WORLD 
-===================================================================*/      
+#include <EEPROM.h>
 #include <Servo.h>
 Servo LRServo;
 Servo LServo;
@@ -129,7 +107,6 @@ delay(50);
 }
 //Вычисление курса на точку
 
-//Гребанный костыль, решается atan2
 if (abs(X-_X)<=1 && _Y>Y){Bearing =  90 -Angle;}
 if (abs(X-_X)<=1 && _Y<Y){Bearing=-90-Angle;}
 if (abs(_Y-Y)<=1 && _X>X){Bearing = 0 - Angle;}
@@ -499,7 +476,9 @@ do {
 //=====================================================================
 void config(){
   int _V=0;
-  while (digitalRead(OKPin)==LOW){
+  boolean flag=false;
+  if (digitalRead(OKPin)==LOW){flag=true;}
+    while (digitalRead(OKPin)==LOW){
     for (int _i=0; _i<=9;_i++){
     _V=_V+analogRead(controlPin);
     }
@@ -511,6 +490,14 @@ void config(){
     Serial.println(Stop_Time, DEC);
     Stop();
     delay(100);
+  }
+  
+  if(flag==true){
+     EEPROM.write(1,Stop_Time);
+  }else{
+    Stop_Time=EEPROM.read(1);
+    Serial.print ("Value Loaded "); 
+    Serial.println (Stop_Time);
   }
 }
 //======================================================================
