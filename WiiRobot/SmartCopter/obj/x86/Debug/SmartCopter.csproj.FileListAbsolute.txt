@@ -1,0 +1,20 @@
+D:\Visual Studio 2010\projects\SmartCopter\SmartCopter\obj\x86\Debug\ResolveAssemblyReference.cache
+D:\Visual Studio 2010\projects\SmartCopter\SmartCopter\obj\x86\Debug\SmartCopter.Properties.Resources.resources
+D:\Visual Studio 2010\projects\SmartCopter\SmartCopter\obj\x86\Debug\GenerateResource.read.1.tlog
+D:\Visual Studio 2010\projects\SmartCopter\SmartCopter\obj\x86\Debug\GenerateResource.write.1.tlog
+D:\Visual Studio 2010\projects\SmartCopter\SmartCopter\bin\Debug\SmartCopter.exe
+D:\Visual Studio 2010\projects\SmartCopter\SmartCopter\bin\Debug\SmartCopter.pdb
+D:\Visual Studio 2010\projects\SmartCopter\SmartCopter\obj\x86\Debug\SmartCopter.exe
+D:\Visual Studio 2010\projects\SmartCopter\SmartCopter\obj\x86\Debug\SmartCopter.pdb
+D:\Visual Studio 2010\projects\SmartCopter\SmartCopter\obj\x86\Debug\SmartCopter.Form1.resources
+D:\Visual Studio 2010\projects\WiiRobot\SmartCopter\obj\x86\Debug\SmartCopter.exe
+D:\Visual Studio 2010\projects\WiiRobot\SmartCopter\obj\x86\Debug\SmartCopter.pdb
+D:\Visual Studio 2010\projects\WiiRobot\SmartCopter\obj\x86\Debug\ResolveAssemblyReference.cache
+D:\Visual Studio 2010\projects\WiiRobot\SmartCopter\obj\x86\Debug\SmartCopter.Form1.resources
+D:\Visual Studio 2010\projects\WiiRobot\SmartCopter\obj\x86\Debug\SmartCopter.Properties.Resources.resources
+D:\Visual Studio 2010\projects\WiiRobot\SmartCopter\obj\x86\Debug\GenerateResource.read.1.tlog
+D:\Visual Studio 2010\projects\WiiRobot\SmartCopter\obj\x86\Debug\GenerateResource.write.1.tlog
+D:\Visual Studio 2010\projects\WiiRobot\SmartCopter\bin\Debug\SmartCopter.exe
+D:\Visual Studio 2010\projects\WiiRobot\SmartCopter\bin\Debug\SmartCopter.pdb
+E:\Programming\Проекты\IMPORTANT\Robot\WiiRobot\SmartCopter\obj\x86\Debug\SmartCopter.exe
+E:\Programming\Проекты\IMPORTANT\Robot\WiiRobot\SmartCopter\obj\x86\Debug\SmartCopter.pdb
